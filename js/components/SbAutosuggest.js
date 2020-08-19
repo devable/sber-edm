@@ -118,8 +118,9 @@ class SbAutosuggest extends SbComponent {
 
     actions = {
         getRepoInfo: async () => {
-            if (this.data.searched.length === 0) {
+            if (!this.data.searched) {
                 this.data.loading = false
+
                 return []
             } else if (this.data.searched.length < this.config.components[this.name].minLetters) {
                 this.data.loading = false
@@ -130,23 +131,25 @@ class SbAutosuggest extends SbComponent {
 
             while (i >= 0) {
                 const data = await this.api.getRepoInfo(this.config.api.repos[i])
-                const patternSearch = `([a-zа-я]*)?(${this.data.searched})([a-zа-я]*)?`
+                const patternSearch = `([a-zа-я]*)?(${this.data.searched.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")})([a-zа-я]*)?`
                 const matched = data.match(new RegExp(patternSearch, 'gi'))
-
-                this.data.loading = false
 
                 if (!!matched && matched.length > this.config.components[this.name].minResult) {
                     const filtered = [...new Set(matched.filter(item => !this.data.selected.includes(item)))]
 
                     i = -1
 
-                    return filtered.length > 0 ? filtered : []
+                    this.data.loading = false
+
+                    return filtered
                 } else {
                     i--
+
+                    if (i === 0) {
+                        this.data.loading = false
+                    }
                 }
             }
-
-            this.data.loading = false
 
             return [this.messages.notFound]
         },
@@ -257,7 +260,7 @@ class SbAutosuggest extends SbComponent {
                     <span class="sb-autosuggest__option">ember</span>,
                     <span class="sb-autosuggest__option">svelte</span>`,
             'onclick': ({ target }) => {
-                if (target.nodeName === 'SPAN') {
+                if (target.nodeName.toLowerCase() === 'span') {
                     this.data.searched = target.innerText
                 }
             }
